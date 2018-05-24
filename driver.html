@@ -1,0 +1,197 @@
+﻿<!DOCTYPE html>
+<html>
+
+<head>
+<meta charset="utf-8" />
+<title>星云出行</title>
+
+<script src="http://api.map.baidu.com/api?v=2.0&ak=A1LU7iHS0avqQwPLAxbhKn0UYSQCuRVH"></script>
+<script src="js/jquery.min.js"></script>
+<script src="js/jquery.baiduMap.min.js"></script>
+
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+	<meta name="viewport" content="initial-scale=1.0, user-scalable=no" />
+	<style type="text/css">
+		html,
+		body {
+     
+			height: 100%;
+		}
+		img{
+			object-position:cover;
+		}
+	h1{
+		text-align: center;
+	}
+	.font{
+	  		text-align: center;
+	}
+
+	#allmap {width:100%;height:700px; margin:0;font-family:"微软雅黑";}
+	
+	
+	</style>
+	<script type="text/javascript" src="http://api.map.baidu.com/api?v=2.0&ak=http://api.map.baidu.com/api?v=2.0&ak=A1LU7iHS0avqQwPLAxbhKn0UYSQCuRVH"></script>
+<title>单击获取点击的经纬度</title>
+</head>
+
+<body background="img/ee.jpg">
+    <h1>星云出行司机端</h1>
+    <h2 style="font-size:28px;" _ngcontent-c31="" class="page-hero__header__title">
+    <a href="index.html">乘客端</a>
+    <a href="driver.html"><h3>司机端</h3></a>
+  
+     </h2>
+    
+	<p style="text-align: center;">点击地图上的点接收乘客订单</p>
+	<script src="/demos/googlegg.js"></script>
+	<div class="container" id="allmap"></div>
+
+
+
+	<script src=lib/jquery-3.3.1.min.js></script>
+	<script src=lib/nebPay.js></script>
+	<script src=lib/bootstrap-4.0.0-dist/js/bootstrap.min.js></script>
+	<script src=lib/nebulas.js></script>
+	
+	<script type="text/javascript" src="js/jquery-2.2.3.min.js"></script>
+	<script src="js/easy-responsive-tabs.js"></script>
+	
+	<script type="text/javascript">
+	
+		"use strict";
+		var dappAddress = "n1fqS3GM3iBmQTkv9pBS2ba9sdwD5YvbPHp";
+
+		var nebulas = require("nebulas"),
+		Account = nebulas.Account,
+		neb = new nebulas.Neb();
+		//neb.setRequest(new nebulas.HttpRequest("https://testnet.nebulas.io"));//测试网环境
+		neb.setRequest(new nebulas.HttpRequest("https://mainnet.nebulas.io"));//主网环境
+		
+		
+		var NebPay = require("nebpay");     //https://github.com/nebulasio/nebPay
+		var nebPay = new NebPay();
+		var serialNumber;
+		var intervalQuery;
+	
+	
+		// 百度地图API功能
+		var map = new BMap.Map("allmap");            
+		map.centerAndZoom("广州",15);           
+		//单击获取点击的经纬度
+		 
+		
+		
+		
+		
+		function addInfoWindow(marker, respObject) {  
+
+			var title = '<div style="font-weight:bold;color:#CE5521;font-size:14px">' + respObject.name + '</div>';
+			var html = [];
+			html.push('<table cellspacing="0" style="table-layout:fixed;width:100%;font:12px arial,simsun,sans-serif"><tbody>');
+			html.push('<tr>');
+			html.push('<td style="vertical-align:top;line-height:16px">' + respObject.tel  + ' </td>');
+			html.push('<tr>');
+			html.push('<td style="vertical-align:top;line-height:16px">' + respObject.address +' </td>');
+			html.push('</tr>');
+			html.push('</tbody></table>');
+			var infoWindow = new BMap.InfoWindow(html.join(""), {
+				 title: title,
+				 width: 200
+			}); 
+
+			var openInfoWinFun = function (e) {  
+				
+				var p = e.target;
+				if(p instanceof BMap.Marker){
+				
+					marker.openInfoWindow(infoWindow);
+					var to = dappAddress;
+					var value = "0";
+					var callFunction = "takeOrder";
+					var callArgs = "[\"" + respObject.key  + "\"]";
+
+					var msg = "是否确认接该订单?";
+					if (confirm(msg)==true){
+						serialNumber = nebPay.call(to, value, callFunction, callArgs, {
+							listener: cbPush
+						});
+					}else{
+
+					} 
+				}
+			}; 
+			
+			marker.addEventListener("click",openInfoWinFun); 
+			return openInfoWinFun;  
+		}  
+
+
+		$(document).ready(function () {
+			var from = Account.NewAccount().getAddressString();
+			var value = "0";
+			var nonce = "0";
+			var gas_price = "1000000";
+			var gas_limit = "2000000";
+			
+			var callFunction = "getOrder";
+			var callArgs = '';
+			
+			var contract = {
+			  "function":callFunction,
+			  "args":callArgs
+			}
+
+			neb.api.call(from,dappAddress,value,nonce,gas_price,gas_limit,contract).then(
+				function(resp){
+				
+					console.log(resp.result);
+					var result = JSON.parse(resp.result);
+					for (var i = 0; i < result.length; i++) {  
+                        var p0 = result[i].lng;  
+                        var p1 = result[i].lat;
+						var marker = new BMap.Marker(new window.BMap.Point(p0, p1));  
+						map.addOverlay(marker);   
+                        addInfoWindow(marker, result[i], i); 
+                    } 
+				
+			}).catch(function(err){
+				  console.log("error:"+err.message);
+			})
+
+		 });
+		
+		
+		
+		function cbPush(resp){
+		   console.log("response of push:"+JSON.stringify(resp));
+		   
+		   if(typeof resp == 'string'){
+				alert("取消接单");
+		   }else{
+				//alert("success");
+				intervalQuery = setInterval(function(){
+						funcIntervalQuery();
+				},10000);
+		   }
+		}
+		
+		
+		function funcIntervalQuery(){
+		  nebPay.queryPayInfo(serialNumber)
+			  .then(function(resp){
+				console.log("response:"+resp);
+				var respObject = JSON.parse(resp);
+				if(respObject.code ===0){
+				  alert("接单成功");
+				}
+			  }).catch(function(err){
+				console.log(err);
+			  });
+		}
+	</script>
+
+
+</div>
+</body>
+</html>

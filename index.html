@@ -1,0 +1,157 @@
+﻿<!DOCTYPE html>
+<html>
+
+<head>
+<meta charset="utf-8" />
+<title>星云出行</title>
+
+<script src="http://api.map.baidu.com/api?v=2.0&ak=A1LU7iHS0avqQwPLAxbhKn0UYSQCuRVH"></script>
+<script src="js/jquery.min.js"></script>
+<script src="js/jquery.baiduMap.min.js"></script>
+
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+	<meta name="viewport" content="initial-scale=1.0, user-scalable=no" />
+	<style type="text/css">
+		html,
+		body {
+     
+			height: 100%;
+		}
+		img{
+			object-position:cover;
+		}
+	h1{
+		text-align: center;
+	}
+	.font{
+	  		text-align: center;
+	}
+
+
+	#allmap {width:100%;height:600px; margin:0;font-family:"微软雅黑";}
+	
+
+	
+	
+	</style>
+	<script type="text/javascript" src="http://api.map.baidu.com/api?v=2.0&ak=http://api.map.baidu.com/api?v=2.0&ak=A1LU7iHS0avqQwPLAxbhKn0UYSQCuRVH"></script>
+<title>单击获取点击的经纬度</title>
+</head>
+
+<body background="img/ee.jpg">
+    <h1>星云出行乘客端</h1>
+    <h2 style="font-size:28px;" _ngcontent-c31="" class="page-hero__header__title">
+    <a href="index.html"><h3>乘客端</h3></a>
+    <a href="driver.html">司机端</a>
+  
+     </h2>
+    
+	<p style="text-align: center;" font color="red">填写联系方式后,点击地图选择上车地点</p>
+	<div id="r-name">你的名称<input type="text" id="myname" size="20" placeholder="填写你的名字" style="width:300px;" /></div>
+	<div id="r-tel">联系电话<input type="text" id="mytel" placeholder="输入联系方式" size="20"  style="width:300px;" /></div>
+	<div id="r-address">地址描述<input type="text" id="myaddress" placeholder="输入地址描述" size="20"  style="width:300px;" /></div>
+	<script src="/demos/googlegg.js"></script>
+	<div class="container" id="allmap"></div>
+
+	
+	
+
+
+	<script src=lib/jquery-3.3.1.min.js></script>
+	<script src=lib/nebPay.js></script>
+	<script src=lib/bootstrap-4.0.0-dist/js/bootstrap.min.js></script>
+	<script src=lib/nebulas.js></script>
+	
+	<script type="text/javascript" src="js/jquery-2.2.3.min.js"></script>
+	<script src="js/easy-responsive-tabs.js"></script>
+	
+	<script type="text/javascript">
+	
+		"use strict";
+		var dappAddress = "n1fqS3GM3iBmQTkv9pBS2ba9sdwD5YvbPHp";
+
+		var nebulas = require("nebulas"),
+		Account = nebulas.Account,
+		neb = new nebulas.Neb();
+		//neb.setRequest(new nebulas.HttpRequest("https://testnet.nebulas.io"));//测试网环境
+		neb.setRequest(new nebulas.HttpRequest("https://mainnet.nebulas.io"));//主网环境
+		
+		
+		var NebPay = require("nebpay");     //https://github.com/nebulasio/nebPay
+		var nebPay = new NebPay();
+		var serialNumber;
+		var intervalQuery;
+	
+	
+		var placeOrder = function(mylng,mylat) {
+			var to = dappAddress;
+			var value = "0";
+			var callFunction = "placeOrder";
+
+			var callArgs = "[\"" + "0" + "\",\""+ $("#myname").val() + "\",\"" + $("#mytel").val() + "\",\""  + mylng + "\",\"" + mylat + "\",\"" + $("#myaddress").val()  + "\"]";
+			
+			if($("#myname").val().length===0){
+				alert("请输入你的名字！")
+				return;
+			}
+			if($("#mytel").val().length===0){
+				alert("请输入你的联系电话！")
+				return;
+			}
+			if($("#myaddress").val().length===0){
+				alert("请输入你的地址描述！")
+				return;
+			}
+			
+			
+			var msg = "是否确定下单?";
+			if (confirm(msg)==true){
+				serialNumber = nebPay.call(to, value, callFunction, callArgs, {
+					listener: cbPush
+				});
+			}
+		};
+	
+	
+	
+
+	
+	
+		// 百度地图API功能
+		var map = new BMap.Map("allmap");            
+		map.centerAndZoom("广州",15);           
+		//单击获取点击的经纬度
+		 map.addEventListener("click",function(e){
+			placeOrder(e.point.lng,e.point.lat);
+		 });
+
+		
+		function cbPush(resp){
+		   console.log("response of push:"+JSON.stringify(resp));
+		   if(typeof resp == 'string'){
+				alert("取消订单");
+		   }else{;
+				intervalQuery = setInterval(function(){
+						funcIntervalQuery();
+				},10000);
+		   }
+		}
+		function funcIntervalQuery(){
+		  nebPay.queryPayInfo(serialNumber)
+			  .then(function(resp){
+				console.log("response:"+resp);
+				var respObject = JSON.parse(resp);
+				if(respObject.code === 0){
+				  alert("下单成功");
+				}
+			  }).catch(function(err){
+				console.log(err);
+			  });
+		}
+
+	</script>
+
+
+</div>
+</body>
+</html>
